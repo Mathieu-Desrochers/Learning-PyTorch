@@ -1,7 +1,7 @@
-import numpy as np
+import numpy
 import torch
 
-def basics():
+def matrices():
 
     # Given a fully connected network
     #
@@ -9,110 +9,81 @@ def basics():
     #         \\  |  \ / |   //
     #            (1b)   (2b)
     
-    # The first layer values
+    # The values of a layer can be
+    # expressed as a matrix
     
-    layer_1 = np.array([
+    layer_1 = numpy.array([
         [-0.5, 0.9, 0.1, -0.7]
         ])
     
-    # The weight between all node combinations
+    # So can the weights between the layers
     # (1a 1b) (1a 2b) (2a 1b) ...
     
-    weight_layer_1_x_layer_2 = np.array([
+    weights = numpy.array([
         [-0.3, 0.9],
         [ 0.2, 0.1],
         [-0.4, 0.6],
         [-0.7, 0.2]
         ])
-    
-    # Multiplying the matrices gives the
-    # second layer input values
-    
-    layer_2_input = layer_1.dot(weight_layer_1_x_layer_2)
-    print(layer_2_input)
-    
-    #           [[0.78 -0.44]]
-    #
-    # Compute the second layer output values
-    # using ReLU: 0 if negative, identity if positive
-    
-    layer_2_output = np.maximum(layer_2_input, 0) 
-    print(layer_2_output)
-    
-    #            [[0.78 0]]
-    #
-    # The expected output
-    
-    expected_layer_2_output = np.array([
-        [0.1, -0.7]
-        ])
-    
-    # Calculate the difference
-    
-    loss = (layer_2_output - expected_layer_2_output).sum()
-    print(loss)
 
-    #              1.38
-    #    
-    # Update the weights based on that information
-    # This is beyond my understanding, but it
-    # will be handled by pytorch
+    # Multiplying the matrices gives
+    # the next layer values
+    
+    layer_2 = layer_1.dot(weights)
+    print(layer_2)
 
-def autograd():
+    #    [[ 0.78 -0.44]]
 
-    # Multiply on the GPU
+def tensors():
+
+    # Tensors are multiplied on the GPU
 
     device = torch.device("cuda:0")
-
-    # Same values as above
 
     layer_1 = torch.tensor([
         [-0.5, 0.9, 0.1, -0.7]
         ], device=device, dtype=torch.float)
 
-    # We needed help with gradients
-    # Autograd to the rescue
+    # Tensors can calculate their gradient automatically
 
-    weight_layer_1_x_layer_2 = torch.tensor([
+    weights = torch.tensor([
         [-0.3, 0.9],
         [ 0.2, 0.1],
         [-0.4, 0.6],
         [-0.7, 0.2]
         ], device=device, dtype=torch.float, requires_grad=True)
 
-    # Do ourselves some learning
+    # Calculate a numeric loss based on the difference
+    # between the actual and the expected output
 
-    for t in range(6000):
+    layer_2 = layer_1.mm(weights)
 
-        # Same computation as above
+    layer_2_expected = torch.tensor([
+        [0.1, -0.7]
+        ], device=device, dtype=torch.float)
 
-        layer_2_output = layer_1.mm(weight_layer_1_x_layer_2).clamp(min=0)
+    loss = (layer_2 - layer_2_expected).sum()
+
+    # Have the gradients be calculated
+    # based on that loss
+
+    loss.backward()
+
+    # Apply the gradients
+
+    with torch.no_grad():
+        learning_rate = 0.0001
+        weights -= learning_rate * weights.grad
+        weights.grad.zero_()
     
-        # Same expected output
+    # We get better weights
 
-        expected_layer_2_output = torch.tensor([
-            [0.1, -0.7]
-            ], device=device, dtype=torch.float)
-    
-        # Calculate the difference
+    print(weights);
 
-        loss = (layer_2_output - expected_layer_2_output).sum()
-        if t % 1000 == 999:
-            print(loss.item())
-    
-        # Update the weights based on that information
+    # tensor([[-0.3000,  0.9000],
+    #         [ 0.1999,  0.0999],
+    #         [-0.4000,  0.6000],
+    #         [-0.6999,  0.2001]], device='cuda:0', requires_grad=True)
 
-        loss.backward()
-    
-        with torch.no_grad():
-            learning_rate = 0.0001
-            weight_layer_1_x_layer_2 -= learning_rate * weight_layer_1_x_layer_2.grad
-            weight_layer_1_x_layer_2.grad.zero_()
-    
-    # We learned better weights
-
-    print(weight_layer_1_x_layer_2);
-
-basics()
-
-autograd()
+matrices()
+tensors()
