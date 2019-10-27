@@ -1,6 +1,7 @@
 import numpy
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 def matrices():
 
@@ -33,7 +34,7 @@ def matrices():
     layer_2 = layer_1.dot(weights)
     print(layer_2)
 
-    # [[ 0.78 -0.44]]
+    #    [[ 0.78 -0.44]]
 
 def tensors():
 
@@ -125,13 +126,15 @@ def networks():
     loss = loss_function(layer_3, layer_3_expected)
     print(loss.item())
 
-    # Adjust the weights between the layers
+    # Adjust the weights in a way that minimizes that value
+    # Here we use the Adam optimizer which is given
+    # the tensors and a learning rate
+    optimizer = optim.Adam(network.parameters(), lr=0.0001)
+    optimizer.zero_grad()
 
     loss.backward()
 
-    with torch.no_grad():
-        for parameter in network.parameters():
-            parameter -= 0.0001 * parameter.grad
+    optimizer.step()
 
     return 1
 
