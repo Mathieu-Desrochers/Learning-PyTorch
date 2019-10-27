@@ -1,5 +1,6 @@
 import numpy
 import torch
+import torch.nn as nn
 
 def matrices():
 
@@ -8,17 +9,17 @@ def matrices():
     #     (1a)   (2a)   (3a)   (4a)
     #         \\  |  \ / |   //
     #            (1b)   (2b)
-    
+
     # The values of a layer can be
     # expressed as a matrix
-    
+
     layer_1 = numpy.array([
         [-0.5, 0.9, 0.1, -0.7]
         ])
-    
+
     # So can the weights between the layers
     # (1a 1b) (1a 2b) (2a 1b) ...
-    
+
     weights = numpy.array([
         [-0.3, 0.9],
         [ 0.2, 0.1],
@@ -28,11 +29,11 @@ def matrices():
 
     # Multiplying the matrices gives
     # the next layer values
-    
+
     layer_2 = layer_1.dot(weights)
     print(layer_2)
 
-    #    [[ 0.78 -0.44]]
+    # [[ 0.78 -0.44]]
 
 def tensors():
 
@@ -44,7 +45,8 @@ def tensors():
         [-0.5, 0.9, 0.1, -0.7]
         ], device=device, dtype=torch.float)
 
-    # Tensors can calculate their gradient automatically
+    # Tensors can track their influence
+    # on the ongoing calculations
 
     weights = torch.tensor([
         [-0.3, 0.9],
@@ -64,18 +66,16 @@ def tensors():
 
     loss = (layer_2 - layer_2_expected).sum()
 
-    # Have the gradients be calculated
-    # based on that loss
+    # Ask the weights to adjust themselves
+    # in a way that minimizes that value
 
     loss.backward()
-
-    # Apply the gradients
 
     with torch.no_grad():
         learning_rate = 0.0001
         weights -= learning_rate * weights.grad
         weights.grad.zero_()
-    
+
     # We get better weights
 
     print(weights);
@@ -85,5 +85,56 @@ def tensors():
     #         [-0.4000,  0.6000],
     #         [-0.6999,  0.2001]], device='cuda:0', requires_grad=True)
 
+def networks():
+
+    # Networks describe a set of tensors
+    # Here we say three fully connected layers
+    # That is three tensors of 1x10, 10x5 and 5x2 respectively
+
+    network = nn.Sequential(
+        nn.Linear(10, 5),
+        nn.ReLU(),
+        nn.Linear(5, 2))
+
+    device = torch.device("cuda:0")
+    network.to(device)
+
+    # Activation functions can be used to modulate output values
+    # Here we say the second layer nodes use the ReLU function
+    # That is a fancy name for max(0, x)
+
+    # Send values through the network
+
+    layer_1 = torch.tensor([
+        [-0.5, 0.9, 0.1, -0.7, 0.2, 0.6, -0.3, 0, -0.4, -0.1]
+        ], device=device, dtype=torch.float)
+
+    layer_3 = network(layer_1)
+    print(layer_3)
+
+    # Instead of summing differences as we did above
+    # We will use the Mean Squared Error function
+    # to calculate a loss
+
+    layer_3_expected = torch.tensor([
+        [0.1, -0.7]
+        ], device=device, dtype=torch.float)
+
+    loss_function = nn.MSELoss(reduction='sum')
+
+    loss = loss_function(layer_3, layer_3_expected)
+    print(loss.item())
+
+    # Adjust the weights between the layers
+
+    loss.backward()
+
+    with torch.no_grad():
+        for parameter in network.parameters():
+            parameter -= 0.0001 * parameter.grad
+
+    return 1
+
 matrices()
 tensors()
+networks()
