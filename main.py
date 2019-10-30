@@ -2,6 +2,10 @@ import numpy
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.utils.data as data
+import torchvision
+import torchvision.datasets as datasets
+import torchvision.transforms as transforms
 
 def matrices():
 
@@ -136,8 +140,66 @@ def networks():
 
     optimizer.step()
 
-    return 1
+def classification():
+
+    # Load images
+
+    image_transforms = transforms.Compose([
+        transforms.Resize(64),
+        transforms.CenterCrop(64),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    image_data = datasets.ImageFolder(
+        root="../Learning-Data/cat-dog/train",
+        transform=image_transforms)
+
+    image_loader = data.DataLoader(image_data, shuffle=True)
+
+    # Describe our network
+
+    network = nn.Sequential(
+        nn.Linear(12288, 64),
+        nn.ReLU(),
+        nn.Linear(64, 2))
+
+    device = torch.device("cuda:0")
+    network.to(device)
+
+    loss_function = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(network.parameters(), lr=0.0001)
+
+    # Do ourselves some learning
+
+    network.train()
+
+    for epoch in range(1000):
+
+        cummulative_loss = 0
+        average_loss = 0
+
+        for (index, batch) in enumerate(image_loader):
+            optimizer.zero_grad()
+
+            input, output_expected = batch
+            input = input.view(-1, 12288).to(device)
+            output_expected = output_expected.to(device)
+            output = network(input)
+
+            loss = loss_function(output, output_expected)
+            loss.backward()
+
+            optimizer.step()
+
+            cummulative_loss += loss.item()
+            average_loss = cummulative_loss / (index + 1)
+
+            if index % 1000 == 0:
+                print("Epoch: {} Index: {} Average Loss: {:.5f}".format(
+                    epoch, index, average_loss))
 
 matrices()
 tensors()
 networks()
+classification()
